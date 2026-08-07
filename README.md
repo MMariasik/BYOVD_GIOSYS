@@ -8,4 +8,4 @@ My Role & Key Contributions
 
 Key Learnings & Skills Acquired
 - Deepened practical understanding of Windows Internals and OS architecture.
-- Gained hands-on experience with the mechanics, weaponization, and execution of kernel-level BYOVD attacks.
+- Gained hands-on experience with the reverse engineering, mechanics, weaponization, and execution of kernel-level BYOVD attacks.
