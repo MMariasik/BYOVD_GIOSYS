@@ -1,6 +1,6 @@
 Project Overview
 
-As a member of the Malware Development and Evasion team at the Dragons Student Science Club in Lodz University of Technology, our team developed a proof-of-concept (PoC) malware designed to perform local privilege escalation (LPE) from a standard user to NT AUTHORITY\SYSTEM and execute post-exploitation activities.
+As a member of the Malware Development and Evasion team at the Dragons Student Science Club in Lodz University of Technology, I've developed a proof-of-concept (PoC) malware designed to perform local privilege escalation (LPE) from a standard user to NT AUTHORITY\SYSTEM and execute post-exploitation activities (currently from Admin to NT AUTHORITY\SYSTEM).
 
 My Role & Key Contributions
 - Conducted in-depth research on Bring Your Own Vulnerable Driver (BYOVD) techniques.
