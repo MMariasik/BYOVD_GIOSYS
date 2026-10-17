@@ -135,7 +135,7 @@ int main() {
         print(OutputMode::_SUCCESS, "SeDebugPivilege enabled!");
 
         std::string currentVersion{};
-        if (!getVersion(currentVersion)) {
+        if (!loadOffsets(currentVersion)) {
             throw std::string{ "Unsupported Windows build: " + currentVersion };
         }
         print(OutputMode::_SUCCESS, "Offsets loaded successfully, winver: " + currentVersion);

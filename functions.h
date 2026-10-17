@@ -4,11 +4,14 @@
 #include "myIO.hpp"
 #include "NT_Definitions.h"
 
+// do wykasowania
 #include <cassert>
 #include <iomanip>
 #include <iostream>
 #include <vector>
 #include <Windows.h>
+//
+
 #include <string>
 #include <map>
 #include <stdexcept>
@@ -24,7 +27,6 @@ std::map < std::string, offsets> Offsets_Dict = {
             0x5fa  // PS_Protection
         }
     },
-    
     {
         "10.0.26100.9711", 
         offsets{ // 26200.9711
@@ -38,34 +40,52 @@ std::map < std::string, offsets> Offsets_Dict = {
 };
 offsets current_offsets{};
 
-bool getVersion(std::string& version) { // to change into NTAPI
+/* DEPRECATED, now using NTAPI version of it
+bool getCurrentVersion_WinAPI(std::string& version) { // to change into NTAPI
 #pragma comment(lib, "version.lib")
 
     const auto system = L"kernel32.dll";
     DWORD dummy;
     const auto cbInfo =
         ::GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, system, &dummy);
+
     std::vector<char> buffer(cbInfo);
-    ::GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, system, dummy,
-        buffer.size(), &buffer[0]);
+
+    ::GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, system, dummy, buffer.size(), &buffer[0]);
+
     void* p = nullptr;
     UINT size = 0;
     ::VerQueryValueW(buffer.data(), L"\\", &p, &size);
-    assert(size >= sizeof(VS_FIXEDFILEINFO));
-    assert(p != nullptr);
+    if (size < sizeof(VS_FIXEDFILEINFO)) {
+        return false;
+    }
+    if(p == nullptr) {
+        return false;
+    }
     const VS_FIXEDFILEINFO* pFixed = static_cast<const VS_FIXEDFILEINFO*>(p);
     //std::cout << HIWORD(pFixed->dwFileVersionMS) << '.'
     //    << LOWORD(pFixed->dwFileVersionMS) << '.'
     //    << HIWORD(pFixed->dwFileVersionLS) << '.'
     //    << LOWORD(pFixed->dwFileVersionLS) << '\n';
-
     version += std::to_string(HIWORD(pFixed->dwFileVersionMS)) + '.';
     version += std::to_string(LOWORD(pFixed->dwFileVersionMS)) + '.';
     version += std::to_string(HIWORD(pFixed->dwFileVersionLS)) + '.';
     version += std::to_string(LOWORD(pFixed->dwFileVersionLS));
 
+    return true;
+} */
+
+bool loadOffsets(std::string& version) {
+
+    //if (!getCurrentVersion_WinAPI(version)) {
+    //    return false;
+    //}
+    if (!getCurrentVersion_NTAPI(version)) {
+        return false;
+    }
+
     auto it = Offsets_Dict.find(version);
-    if (it == Offsets_Dict.end()) {     
+    if (it == Offsets_Dict.end()) {
         return false;
     }
     current_offsets = it->second;

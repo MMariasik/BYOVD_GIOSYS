@@ -359,3 +359,130 @@ int NTGetNtoskrnlInfo(_Out_ PRTL_PROCESS_MODULE_INFORMATION pKernelInfo) {
 
     return bFound;
 }
+
+
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#define ALIGN_UP(value, alignment) (((ULONG_PTR)(value) + ((alignment) - 1)) & ~((alignment) - 1))
+#define HIWORD(l) ((USHORT)((((DWORD)(l)) >> 16) & 0xffff))
+#define LOWORD(l) ((USHORT)(((DWORD)(l)) & 0xffff))
+#define NTAPI __stdcall
+
+typedef struct _LDR_RESOURCE_INFO {
+    ULONG_PTR Type;
+    ULONG_PTR Name;
+    ULONG_PTR Language;
+} LDR_RESOURCE_INFO, * PLDR_RESOURCE_INFO;
+
+typedef struct _UNICODE_STRING
+{
+    USHORT Length;
+    USHORT MaximumLength;
+    _Field_size_bytes_part_opt_(MaximumLength, Length) PWCH Buffer;
+} UNICODE_STRING, * PUNICODE_STRING;
+typedef const UNICODE_STRING* PCUNICODE_STRING;
+
+FORCEINLINE
+VOID
+NTAPI_INLINE
+RtlInitUnicodeString(
+    _Out_ PUNICODE_STRING DestinationString,
+    _In_opt_z_ PCWSTR SourceString
+)
+{
+    if (SourceString)
+    {
+        SIZE_T stringLength = wcslen(SourceString);
+
+        if (stringLength > UNICODE_STRING_MAX_CHARS - 1)
+            stringLength = UNICODE_STRING_MAX_CHARS - 1;
+
+        DestinationString->Length = (USHORT)(stringLength * sizeof(WCHAR));
+        DestinationString->MaximumLength = DestinationString->Length + sizeof(UNICODE_NULL);
+    }
+    else
+        DestinationString->MaximumLength = DestinationString->Length = 0;
+
+    DestinationString->Buffer = (PWCH)SourceString;
+}
+
+typedef NTSTATUS(NTAPI* LdrGetDllHandle)(
+    _In_opt_ PCWSTR DllPath,
+    _In_opt_ PULONG DllCharacteristics,
+    _In_ PCUNICODE_STRING DllName,
+    _Out_ PVOID* DllHandle
+);
+typedef NTSTATUS(NTAPI* LdrFindResource_U)(
+    _In_ PVOID DllHandle,
+    _In_reads_(Count) PULONG_PTR ResourcePath,
+    _In_ ULONG Count,
+    _Out_ PIMAGE_RESOURCE_DATA_ENTRY* ResourceDataEntry
+);
+typedef NTSTATUS(NTAPI* LdrAccessResource)(
+    _In_ PVOID DllHandle,
+    _In_ PIMAGE_RESOURCE_DATA_ENTRY ResourceDataEntry,
+    _Out_opt_ PVOID* ResourceBuffer,
+    _Out_opt_ ULONG* ResourceLength
+);
+
+bool getCurrentVersion_NTAPI(std::string& version) {
+    UNICODE_STRING usSystemDll;
+    PVOID hKernel32 = nullptr;
+
+    RtlInitUnicodeString(&usSystemDll, L"kernel32.dll");
+
+    HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+    if (!hNtdll) return 2;
+
+    LdrGetDllHandle ldrGetDllHandle =
+        (LdrGetDllHandle)GetProcAddress(hNtdll, "LdrGetDllHandle");
+    if (!ldrGetDllHandle) return false;
+    LdrFindResource_U ldrFindResource_U =
+        (LdrFindResource_U)GetProcAddress(hNtdll, "LdrFindResource_U");
+    if (!ldrGetDllHandle) return false;
+    LdrAccessResource ldrAccessResource =
+        (LdrAccessResource)GetProcAddress(hNtdll, "LdrAccessResource");
+    if (!ldrAccessResource) return false;
+
+
+    if (!NT_SUCCESS(ldrGetDllHandle(nullptr, nullptr, &usSystemDll, &hKernel32))) {
+        return false;
+    }
+
+    LDR_RESOURCE_INFO resInfo = { 0 };
+    resInfo.Type = 16; // RT_VERSION
+    resInfo.Name = 1;  // VS_VERSION_INFO
+    resInfo.Language = 0;
+
+    PIMAGE_RESOURCE_DATA_ENTRY pResEntry = nullptr;
+    if (!NT_SUCCESS(ldrFindResource_U(hKernel32, (PULONG_PTR)&resInfo, 3, &pResEntry))) {
+        return false;
+    }
+
+    PVOID pResourceData = nullptr;
+    ULONG resSize = 0;
+    if (!NT_SUCCESS(ldrAccessResource(hKernel32, pResEntry, &pResourceData, &resSize)) || !pResourceData) {
+        return false;
+    }
+
+    PBYTE pData = (PBYTE)pResourceData;
+    pData += 6;
+
+    while (*(PWCHAR)pData != L'\0') {
+        pData += sizeof(wchar_t);
+    }
+    pData += sizeof(wchar_t);
+
+    pData = (PBYTE)ALIGN_UP(pData, 4);
+    VS_FIXEDFILEINFO* pFixed = (VS_FIXEDFILEINFO*)pData;
+
+    if (pFixed->dwSignature != 0xFEEF04BD) {
+        return false;
+    }
+
+    version += std::to_string(HIWORD(pFixed->dwFileVersionMS)) + '.';
+    version += std::to_string(LOWORD(pFixed->dwFileVersionMS)) + '.';
+    version += std::to_string(HIWORD(pFixed->dwFileVersionLS)) + '.';
+    version += std::to_string(LOWORD(pFixed->dwFileVersionLS));
+
+    return true;
+}
