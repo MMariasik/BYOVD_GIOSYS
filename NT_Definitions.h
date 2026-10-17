@@ -4,20 +4,13 @@
 // Token
 // UniqueProcessId
 // ActiveProcessLinks
-struct offsets {
+
+struct offsets{
     ULONG64 PsInitialSystemProcess; // PEPROCESS PsInitialSystemProcess (czyli wskaźnik na strukturę eprocess)
     ULONG64 Token;
     ULONG64 UniqueProcessId;
     ULONG64 ActiveProcessLinks;
     ULONG64 PS_PROTECTION;
-} g_offsets = {
- 0xFC6ab0,  // PsInitialSystemProcess WIN11 25H2 (ntoskrnl.exe base address - PsInitialSystemProcess address |=| ? nt!PsInitialSystemProcess - nt) 
-        // 0xfc6af0? kompilacja:26200.8875
-        // 0xFC6ab0 kompilacja:26200.9711
- 0x248, // Token,
- 0x1d0, // UniqueProcessId,
- 0x1d8, // ActiveProcessLinks
- 0x5fa  // PS_Protection
 };
 
 
