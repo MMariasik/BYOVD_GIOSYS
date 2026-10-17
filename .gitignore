@@ -1,0 +1,6 @@
+# all VS26 build artifacts, configuration etc
+
+x64/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
