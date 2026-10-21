@@ -16,7 +16,8 @@ In the future, the goal is to conduct post-exploitation activities. Currently, t
 ![Alt text](/screenshots/BEFORE.png?raw=true "BEFORE")
 
 The PID is different, bcs I closed cmd by mistake and had to do it again, but trust me it works.
-First whoami after LPE, see the NT SYSTEM privileges, second after PPL my windows doesn't allow to execute programs from this flags.
+
+First whoami after LPE, see the NT SYSTEM privileges. Second after PPL, my windows doesn't allow to execute programs from this flags.
 ![Alt text](/screenshots/AFTER.png?raw=true "AFTER")
 
 My Role & Key Contributions
