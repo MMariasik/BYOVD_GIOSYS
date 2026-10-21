@@ -12,6 +12,11 @@ In the future, the goal is to conduct post-exploitation activities. Currently, t
 # PPL
 ![Alt text](/screenshots/PPL.png?raw=true "PPL")
 
+# CMD before and after elevation
+![Alt text](/screenshots/BEFORE.png?raw=true "BEFORE")
+PID is different, bcs I closed cmd by mistake and had to do it again, but trust me it works
+![Alt text](/screenshots/AFTER.png?raw=true "AFTER")
+
 My Role & Key Contributions
 
     Conducted in-depth research on Bring Your Own Vulnerable Driver (BYOVD) techniques.
