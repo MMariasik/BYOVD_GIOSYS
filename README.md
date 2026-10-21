@@ -1,18 +1,18 @@
-Project Overview
+# Project Overview
 
 As a member of the Malware Development and Evasion team at the Dragons Student Science Club in Lodz University of Technology, I've developed a proof-of-concept (PoC) malware designed to perform local privilege escalation (LPE) from a administrator to NT AUTHORITY\SYSTEM.
 In the future, the goal is to conduct post-exploitation activities. Currently, the focus is on disabling Windows Tamper Protection, including investigating techniques such as PPL bypasses that modify protection flags.
 
-# Rootkit BYOVD
+### Rootkit BYOVD
 ![Alt text](/screenshots/BYOVD.png?raw=true "BYOVD")
 
-# LPE
+### LPE
 ![Alt text](/screenshots/LPE.png?raw=true "LPE")
 
-# PPL
+### PPL
 ![Alt text](/screenshots/PPL.png?raw=true "PPL")
 
-# CMD before and after elevation
+### CMD before and after elevation
 ![Alt text](/screenshots/BEFORE.png?raw=true "BEFORE")
 
 The PID is different, bcs I closed cmd by mistake and had to do it again, but trust me it works.
