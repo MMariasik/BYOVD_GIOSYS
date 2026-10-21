@@ -54,7 +54,7 @@ public:
 
 		bool isSuccess = DeviceIoControl(this->hDriver, RW_PRIMITIVE, (LPVOID)KRW, sizeof(KernelReadWrite), NULL, 0, NULL, NULL);
 		if (isSuccess) {
-			//print(OutputMode::_SUCCESS, "Copied " + std::to_string(size) + " bytes to buffer");
+			//print(OutputMode::_SUCCESS, "Copied " + std::to_string(size) + " bytes to buffer"); // commented bcs of spam
 		}
 		else {
 			print(OutputMode::_ERROR, "Error while trying to copy buffer! Error code:" + std::to_string(GetLastError()) );

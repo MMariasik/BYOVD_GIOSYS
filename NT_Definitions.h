@@ -1,10 +1,5 @@
 #pragma once
 
-// PsInitialSystemProcess
-// Token
-// UniqueProcessId
-// ActiveProcessLinks
-
 struct offsets{
     ULONG64 PsInitialSystemProcess; // PEPROCESS PsInitialSystemProcess (czyli wskaźnik na strukturę eprocess)
     ULONG64 Token;
@@ -13,6 +8,20 @@ struct offsets{
     ULONG64 PS_PROTECTION;
 };
 
+//0x1 bytes (sizeof)
+struct _PS_PROTECTION
+{
+    union
+    {
+        UCHAR Level;                                                        //0x0
+        struct
+        {
+            UCHAR Type : 3;                                                   //0x0
+            UCHAR Audit : 1;                                                  //0x0
+            UCHAR Signer : 4;                                                 //0x0
+        };
+    };
+};
 
 #define STATUS_SUCCESS               ((NTSTATUS)0x00000000L)
 #define STATUS_INFO_LENGTH_MISMATCH  ((NTSTATUS)0xC0000004L)
@@ -363,9 +372,6 @@ int NTGetNtoskrnlInfo(_Out_ PRTL_PROCESS_MODULE_INFORMATION pKernelInfo) {
 
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define ALIGN_UP(value, alignment) (((ULONG_PTR)(value) + ((alignment) - 1)) & ~((alignment) - 1))
-#define HIWORD(l) ((USHORT)((((DWORD)(l)) >> 16) & 0xffff))
-#define LOWORD(l) ((USHORT)(((DWORD)(l)) & 0xffff))
-#define NTAPI __stdcall
 
 typedef struct _LDR_RESOURCE_INFO {
     ULONG_PTR Type;
@@ -431,7 +437,7 @@ bool getCurrentVersion_NTAPI(std::string& version) {
     RtlInitUnicodeString(&usSystemDll, L"kernel32.dll");
 
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
-    if (!hNtdll) return 2;
+    if (!hNtdll) return false;
 
     LdrGetDllHandle ldrGetDllHandle =
         (LdrGetDllHandle)GetProcAddress(hNtdll, "LdrGetDllHandle");

